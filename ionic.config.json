@@ -1,0 +1,7 @@
+{
+  "name": "Esarwa Warehouse",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}
