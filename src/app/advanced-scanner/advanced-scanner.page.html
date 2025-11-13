@@ -1,0 +1,184 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>{{ isImageCaptureMode ? 'Capture Images' : 'Scan Multiple Barcodes' }}</ion-title>
+    <ion-buttons slot="start">
+      <ion-button (click)="finishScanning()" fill="clear" color="success">
+        <ion-icon name="checkmark" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-buttons slot="end">
+      <ion-button (click)="toggleImageCaptureMode()" fill="clear" [color]="isImageCaptureMode ? 'primary' : 'medium'">
+        <ion-icon [name]="isImageCaptureMode ? 'camera' : 'scan'" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button (click)="viewResults()" fill="clear" color="primary">
+        <ion-icon name="list" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button (click)="cancelScanning()" fill="clear" color="danger">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="scanner-container">
+    <!-- Camera Video Element -->
+    <div class="video-container" *ngIf="hasPermission && isScanning">
+      <video id="video" autoplay playsinline></video>
+      <div class="scan-overlay">
+        <div class="scan-frame">
+          <div class="corner top-left"></div>
+          <div class="corner top-right"></div>
+          <div class="corner bottom-left"></div>
+          <div class="corner bottom-right"></div>
+        </div>
+        <div class="scan-line"></div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div class="loading-state" *ngIf="isScanning && !hasPermission">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+      <p>Initializing camera...</p>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-state" *ngIf="errorMessage">
+      <ion-icon name="camera-outline" color="danger" size="large"></ion-icon>
+      <h3>Camera Error</h3>
+      <p>{{ errorMessage }}</p>
+      <ion-button (click)="retryScanning()" class="warehouse-button warehouse-button-primary">
+        <ion-icon name="refresh" slot="start"></ion-icon>
+        Try Again
+      </ion-button>
+    </div>
+
+    <!-- Start Scanning Button -->
+    <div class="start-scanning" *ngIf="!isScanning && !errorMessage">
+      <div class="start-content">
+        <ion-icon name="camera" size="large" color="primary"></ion-icon>
+        <h2>Advanced Barcode Scanner</h2>
+        <p>Scan multiple barcodes with real-time camera preview</p>
+        <ion-button (click)="startScanning()" expand="block" color="primary" size="large">
+          <ion-icon name="camera" slot="start"></ion-icon>
+          Start Scanning
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- Image Capture Mode -->
+    <div class="image-capture-mode" *ngIf="isImageCaptureMode">
+      <div class="capture-container">
+        <div class="capture-preview" *ngIf="capturedImages.length > 0">
+          <h4>Captured Images ({{ capturedImages.length }})</h4>
+          <div class="image-grid">
+            <div class="image-item" *ngFor="let image of capturedImages; let i = index">
+              <img [src]="image.imageData" [alt]="'Captured image ' + (i + 1)">
+              <div class="image-overlay">
+                <ion-button (click)="removeCapturedImage(image.timestamp)" fill="clear" color="danger" size="small">
+                  <ion-icon name="trash" slot="icon-only"></ion-icon>
+                </ion-button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="capture-actions">
+          <ion-button 
+            (click)="captureImage()" 
+            [disabled]="isProcessing"
+            class="capture-button"
+            expand="block"
+            color="primary">
+            <ion-icon name="camera" slot="start"></ion-icon>
+            {{ isProcessing ? 'Capturing...' : 'Capture Image' }}
+          </ion-button>
+
+          <ion-button 
+            (click)="processAllImages()" 
+            [disabled]="capturedImages.length === 0 || isProcessing"
+            class="process-button"
+            expand="block"
+            color="success">
+            <ion-icon name="analytics" slot="start"></ion-icon>
+            Process All Images ({{ capturedImages.length }})
+          </ion-button>
+
+          <ion-button 
+            (click)="clearCapturedImages()" 
+            [disabled]="capturedImages.length === 0"
+            class="clear-button"
+            expand="block"
+            color="warning">
+            <ion-icon name="trash" slot="start"></ion-icon>
+            Clear All Images
+          </ion-button>
+        </div>
+
+        <div class="capture-instructions">
+          <h4>Image Capture Instructions</h4>
+          <ul>
+            <li><ion-icon name="camera" size="small"></ion-icon> Capture clear images of boxes/strips with GS1 DataMatrix barcodes</li>
+            <li><ion-icon name="flash" size="small"></ion-icon> Ensure good lighting and focus</li>
+            <li><ion-icon name="grid" size="small"></ion-icon> Capture multiple images for batch processing</li>
+            <li><ion-icon name="analytics" size="small"></ion-icon> Process images to decode barcodes and identify parent-child relationships</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instructions and Progress -->
+    <div class="instructions" *ngIf="hasPermission && isScanning && !isImageCaptureMode">
+      <div class="instruction-card">
+        <div class="scan-progress">
+          <ion-icon name="barcode" color="primary"></ion-icon>
+          <div class="progress-info">
+            <h4>Continuous Scanning Mode</h4>
+            <p>Position barcodes within the frame - they will be scanned automatically</p>
+            <div class="scan-count">
+              <span class="count-badge">{{ scanCount }}</span>
+              <span class="count-text">items scanned</span>
+            </div>
+          </div>
+        </div>
+        <div class="scan-tips">
+          <p><ion-icon name="bulb" size="small"></ion-icon> Hold steady and move barcodes into the frame</p>
+          <p><ion-icon name="flash" size="small"></ion-icon> Ensure good lighting for better detection</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- GS1 Barcode Results -->
+    <div class="gs1-results" *ngIf="decodedBarcodes.length > 0">
+      <div class="results-header">
+        <h4>GS1 DataMatrix Results ({{ decodedBarcodes.length }})</h4>
+        <ion-button (click)="decodedBarcodes = []" fill="clear" color="medium" size="small">
+          <ion-icon name="close" slot="icon-only"></ion-icon>
+        </ion-button>
+      </div>
+      
+      <div class="barcode-list">
+        <div class="barcode-item" *ngFor="let barcode of decodedBarcodes">
+          <div class="barcode-info">
+            <div class="barcode-header">
+              <span class="barcode-type" [class]="barcode.isParent ? 'parent' : barcode.isChild ? 'child' : 'standalone'">
+                {{ barcode.isParent ? 'Parent' : barcode.isChild ? 'Child' : 'Standalone' }}
+              </span>
+              <span class="barcode-serial">{{ barcode.serialNumber }}</span>
+            </div>
+            <div class="barcode-details">
+              <p><strong>GTIN:</strong> {{ barcode.gtin }}</p>
+              <p><strong>Product:</strong> {{ barcode.productName }}</p>
+              <p *ngIf="barcode.batchNumber"><strong>Batch:</strong> {{ barcode.batchNumber }}</p>
+              <p *ngIf="barcode.quantity"><strong>Quantity:</strong> {{ barcode.quantity }}</p>
+              <p *ngIf="barcode.parentBarcode"><strong>Parent:</strong> {{ barcode.parentBarcode }}</p>
+              <p *ngIf="barcode.childBarcodes && barcode.childBarcodes.length > 0">
+                <strong>Children:</strong> {{ barcode.childBarcodes.length }} items
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</ion-content>

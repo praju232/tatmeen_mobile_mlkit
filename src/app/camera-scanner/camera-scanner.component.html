@@ -1,0 +1,368 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" fill="clear" color="medium">
+        <ion-icon name="arrow-back" slot="icon-only"></ion-icon>
+        <!-- <ion-back-button defaultHref="/grn/{{ grnId }}"></ion-back-button> -->
+      </ion-button>
+    </ion-buttons>
+    <ion-title>
+      {{ scanningMode === 'box' ? 'Scan Box Barcode' : (isImageCaptureMode ? 'Capture Images inside box' : scanningMode === 'location_single' ? 'Capture Location Barcode' : 'Scan Barcodes') }}
+      <span *ngIf="grnRef" class="grn-context">- GRN: {{ grnRef }}</span>
+      <span *ngIf="boxProductName" class="box-context">- Product: {{ boxProductName }}</span>
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="scanner-container">
+    <!-- Box Information Display (after box is scanned) -->
+    <div class="box-info-display" *ngIf="isBoxScanned && boxScanningComplete">
+      <div class="box-info-card">
+        <h3>Box Scanned Successfully!</h3>
+        <div class="box-details">
+          <p><strong>Product:</strong> {{ boxProductName }}</p>
+          <!-- <p><strong>GTIN:</strong> {{ boxGTIN }}</p> -->
+          <p><strong>Box Barcode:</strong> {{ boxBarcode }}</p>
+        </div>
+        <div class="box-actions">
+          <ion-button (click)="resetBoxScanning()" fill="outline" color="warning" size="small">
+            <ion-icon name="refresh" slot="start"></ion-icon>
+            Rescan Box
+          </ion-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Video Scanning Mode - For both box and batch modes -->
+    <div class="live-scanning-mode" *ngIf="isLiveScanning">
+      <div class="video-container">
+        <video 
+          id="liveVideo" 
+          autoplay 
+          muted 
+          playsinline 
+          class="live-video"
+          [style.display]="videoElement ? 'block' : 'none'">
+        </video>
+        <canvas id="overlayCanvas" class="overlay-canvas"></canvas>
+        
+        <!-- Loading indicator -->
+        <div class="camera-loading" *ngIf="isProcessing">
+          <ion-spinner name="crescent"></ion-spinner>
+          <p>Starting camera...</p>
+        </div>
+        
+        <!-- Success Count Display -->
+        <div class="success-count-display" *ngIf="decodedBarcodes.length > 0">
+          <div class="success-badge">
+            <ion-icon name="checkmark-circle" color="success"></ion-icon>
+            <span class="count">{{ decodedBarcodes.length }}</span>
+            <span class="label">Items Scanned</span>
+          </div>
+        </div>
+        
+        <!-- Danger Light -->
+        <div class="danger-light" 
+             *ngIf="showDangerLight" 
+             [class.blinking]="dangerLightBlink">
+          <ion-icon name="warning" color="danger"></ion-icon>
+          <span>Scan Failed!</span>
+        </div>
+        
+            <!-- Live Scan Stats - Only for batch mode -->
+            <div class="live-stats" *ngIf="liveQrResults.length > 0 && scanningMode === 'batch'">
+              <div class="stat-badge success">
+                <ion-icon name="checkmark-circle" color="success"></ion-icon>
+                <span>{{ getSuccessfulScanCount() }}</span>
+              </div>
+              <div class="stat-badge failed" *ngIf="hasFailedScans()">
+                <ion-icon name="close-circle" color="danger"></ion-icon>
+                <span>{{ getFailedScanCount() }}</span>
+              </div>
+              <div class="stat-badge duplicate" *ngIf="hasDuplicateScans()">
+                <ion-icon name="refresh-circle" color="warning"></ion-icon>
+                <span>{{ getDuplicateScanCount() }}</span>
+              </div>
+              <div class="stat-badge misplaced" *ngIf="hasMisplacedBarcodes()">
+                <ion-icon name="alert-circle" color="danger"></ion-icon>
+                <span>{{ getMisplacedBarcodeCount() }}</span>
+              </div>
+            </div>
+            
+            <!-- Compact Results Summary - Only for batch mode -->
+            <div class="compact-results" *ngIf="decodedBarcodes.length > 0 && scanningMode === 'batch'">
+              <div class="results-summary">
+                <ion-icon name="list" color="primary"></ion-icon>
+                <span>{{ decodedBarcodes.length }} items scanned</span>
+                <span *ngIf="hasMisplacedBarcodes()" class="misplaced-indicator">
+                  ({{ getMisplacedBarcodeCount() }} misplaced)
+                </span>
+                <ion-button (click)="showFullResults = !showFullResults" fill="clear" size="small">
+                  <ion-icon [name]="showFullResults ? 'chevron-up' : 'chevron-down'"></ion-icon>
+                </ion-button>
+              </div>
+              
+              <!-- Expandable Results List -->
+              <div class="expandable-results" *ngIf="showFullResults">
+                <div class="result-item" 
+                     *ngFor="let barcode of decodedBarcodes; let i = index"
+                     [class.validation-error]="hasBarcodeValidationError(barcode)">
+                  <div class="item-info">
+                    <span class="item-serial">{{ barcode.serialNumber }}</span>
+                    <span class="item-gtin">{{ barcode.gtin }}</span>
+                    <div class="validation-error-message" *ngIf="hasBarcodeValidationError(barcode)">
+                      <ion-icon name="warning" color="danger"></ion-icon>
+                      <span>{{ getBarcodeValidationErrors(barcode)[0] }}</span>
+                    </div>
+                  </div>
+                  <ion-button (click)="removeBarcode(i)" fill="clear" color="danger" size="small">
+                    <ion-icon name="trash" slot="icon-only"></ion-icon>
+                  </ion-button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Box Scanning Instructions - Only for box mode -->
+            <div class="box-scanning-instructions" *ngIf="scanningMode === 'box'">
+              <div class="instruction-card">
+                <h4>Box Scanning Mode</h4>
+                <p>Point the camera at the box barcode. The scanner will automatically detect and process the barcode.</p>
+                <div class="scan-tips">
+                  <p><ion-icon name="bulb"></ion-icon> Ensure good lighting</p>
+                  <p><ion-icon name="scan"></ion-icon> Hold steady and center the barcode</p>
+                  <p><ion-icon name="checkmark"></ion-icon> Wait for automatic detection</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Location Scanning Instructions - Only for location mode -->
+            <div class="location-scanning-instructions" *ngIf="scanningMode === 'location' || scanningMode === 'location_single'">
+              <div class="instruction-card">
+                <h4>Location Scanning Mode</h4>
+                <p>Point the camera at the location barcode. The scanner will automatically detect and process the location.</p>
+                <div class="scan-tips">
+                  <p><ion-icon name="bulb"></ion-icon> Ensure good lighting</p>
+                  <p><ion-icon name="scan"></ion-icon> Hold steady and center the barcode</p>
+                  <p><ion-icon name="checkmark"></ion-icon> Wait for automatic detection</p>
+                </div>
+              </div>
+            </div>
+      </div>
+      
+      <!-- Live Scan Controls -->
+      <div class="live-controls">
+        <ion-button 
+          (click)="stopLiveScanning()" 
+          class="stop-button"
+          expand="block"
+          color="danger">
+          <ion-icon name="stop" slot="start"></ion-icon>
+          {{ scanningMode === 'box' ? 'Stop Box Scanning' : 'Stop Scanning' }}
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- Image Capture Mode (Fallback) -->
+    <div class="image-capture-mode" *ngIf="!isLiveScanning">
+      <div class="capture-container">
+        <div class="capture-preview" *ngIf="capturedImages.length > 0">
+          <h4>Captured Images ({{ capturedImages.length }})</h4>
+          <div class="image-grid">
+            <div class="image-item" *ngFor="let image of capturedImages; let i = index">
+              <img [src]="image.imageDataUrl" [alt]="'Captured image ' + (i + 1)">
+              <div class="image-overlay">
+                <ion-button (click)="removeCapturedImage(image.timestamp)" fill="clear" color="danger" size="small">
+                  <ion-icon name="trash" slot="icon-only"></ion-icon>
+                </ion-button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="capture-actions" *ngIf="!isLiveScanning">
+        <!-- For batches mode: Show live scanning option (only after box is scanned) -->
+        <div class="action-row primary" *ngIf="scanningMode === 'batch' && isBoxScanned">
+          <ion-button *ngIf="!isProcessing && !canFinishScanning()"
+            (click)="startLiveScanning()" 
+            [disabled]="isProcessing"
+            class="scan-button"
+            expand="block"
+            color="primary">
+            <ion-icon name="scan" slot="start"></ion-icon>
+            {{ isProcessing ? 'Starting...' : 'Start Batch Scanning' }}
+          </ion-button>
+        
+          <ion-button *ngIf="canFinishScanning()"
+            (click)="startLiveScanning()" 
+            [disabled]="isProcessing"
+            class="scan-button"
+            expand="block"
+            color="primary">
+            <ion-icon name="scan" slot="start"></ion-icon>
+            {{ isProcessing ? 'Starting...' : 'Continue Scanning' }}
+          </ion-button>
+        </div>
+        <!-- retry button -->
+        <!-- <div class="action-row primary" *ngIf="scanningMode === 'batch' && isBoxScanned">
+          <ion-button 
+            (click)="retryScanning()" 
+            [disabled]="isProcessing"
+            class="scan-button"
+            expand="block"
+            color="primary">
+            <ion-icon name="scan" slot="start"></ion-icon>
+            Retry Scanning
+          </ion-button>
+        </div> -->
+
+        <!-- For box mode: Show single scan option (only if box not scanned yet) -->
+        <div class="primary" *ngIf="scanningMode === 'box' && !isBoxScanned">
+          <ion-button 
+            (click)="startSingleBoxScan()" 
+            [disabled]="isProcessing"
+            class="scan-button"
+            expand="block"
+            color="primary">
+            <ion-icon name="scan" slot="start"></ion-icon>
+            {{ isProcessing ? 'Starting...' : 'Scan Box Barcode' }}
+          </ion-button>
+        </div>
+        
+        <!-- Show message if box needs to be scanned first -->
+        <div class="action-row info" *ngIf="scanningMode === 'batch' && !isBoxScanned">
+          <div class="info-message">
+            <ion-icon name="information-circle" color="primary"></ion-icon>
+            <span>Please scan the box barcode first to enable batch scanning</span>
+          </div>
+        </div>
+       
+        
+        <!-- Validation Error Summary -->
+        <div class="validation-error-summary" *ngIf="hasValidationErrors()">
+          <div class="error-summary-header">
+            <ion-icon name="warning" color="danger"></ion-icon>
+            <span> Errors Found</span>
+          </div>
+          <div class="error-summary-content">
+            <!-- Mismatch Summary -->
+            <div class="mismatch-summary" *ngIf="getMismatchSummaryText()">
+              <p class="mismatch-text">{{ getMismatchSummaryText() }}</p>
+            </div>
+            <!-- <p>{{ getTotalValidationErrorCount() }} barcode(s) are wrongly placed and must be fixed before finishing.</p> -->
+            <p>Click the "Remove" button next to each mismatched item to remove it, then you can finish scanning.</p>
+          </div>
+        </div>
+
+        <!-- Finish Scanning Button - Show when we have scanned data -->
+        <div class="action-row finish" *ngIf="(isBoxScanned && decodedBarcodes.length > 0) || (isBoxScanned && !isLiveScanning)">
+          <ion-button 
+          (click)="clearCapturedImages()" 
+          [disabled]="isProcessing"
+          class="action-btn clear"
+          fill="outline"
+          color="warning">
+          <ion-icon name="trash" slot="icon-only"></ion-icon>
+          <span class="btn-text">Clear</span>
+        </ion-button>
+          <ion-button 
+            (click)="finishScanningAndNavigate()" 
+            [disabled]="isProcessing || !canFinishScanning()"
+            class="finish-button"
+            expand="block"
+            [color]="canFinishScanning() ? 'success' : 'medium'">
+            <ion-icon name="checkmark-circle" slot="start"  *ngIf="!hasValidationErrors()"></ion-icon>
+            <span *ngIf="hasValidationErrors()">Remove Mismatched ({{ getTotalValidationErrorCount() }})</span>
+            <span *ngIf="!hasValidationErrors()">Finish Scanning</span>
+          </ion-button>
+        </div>
+      </div>
+
+     
+    </div>
+  </div>
+   <!-- GS1 Barcode Results -->
+   <div class="gs1-results" *ngIf="decodedBarcodes.length > 0 && !isLiveScanning">
+    <div class="results-header">
+      <h4>GS1 DataMatrix Results ({{ decodedBarcodes.length }} total)</h4>
+      <div class="header-actions">
+        <!-- <ion-button (click)="showLocationSelection()" fill="solid" color="success" size="small">
+          <ion-icon name="location" slot="start"></ion-icon>
+          Place in Location
+        </ion-button> -->
+        <ion-button (click)="exportResults()" fill="outline" color="primary" size="small">
+          <ion-icon name="download" slot="start"></ion-icon>
+          Export
+        </ion-button>
+      </div>
+    </div>
+    
+    <!-- Validation Summary -->
+    <div class="validation-summary" *ngIf="isValidationEnabled && getValidationErrorCount() > 0">
+      <div class="validation-alert">
+        <ion-icon name="warning" color="danger"></ion-icon>
+        <div class="alert-content">
+          <h5>Validation Errors Detected</h5>
+          <p>{{getValidationErrorCount()}} items are wrongly placed in this box</p>
+          <!-- Mismatch Summary -->
+          <div class="mismatch-summary" *ngIf="getMismatchSummaryText()">
+            <p class="mismatch-text">{{ getMismatchSummaryText() }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="barcode-list">
+      <div class="barcode-item" 
+           *ngFor="let barcode of decodedBarcodes; let i = index"
+           [class.validation-error]="hasBarcodeValidationError(barcode)">
+        <div class="barcode-info">
+          <div class="barcode-header">
+            <!-- <span class="barcode-type" [class]="barcode.isParent ? 'parent' : barcode.isChild ? 'child' : 'standalone'">
+              {{ barcode.isParent ? 'Parent' : barcode.isChild ? 'Child' : 'Standalone' }}
+            </span> -->
+            <span class="barcode-serial">{{ barcode.serialNumber }}</span>
+            <!-- Validation Error Badge -->
+            <div class="validation-badge" *ngIf="hasBarcodeValidationError(barcode)">
+              <ion-icon name="warning" color="danger"></ion-icon>
+              <span>Misplaced</span>
+            </div>
+          </div>
+          <div class="barcode-details">
+            <p><strong>GTIN:</strong> {{ barcode.gtin }}</p>
+            <p><strong>Product:</strong> {{ barcode.productName }}</p>
+            <p *ngIf="barcode.batchNumber"><strong>Batch Code:</strong> {{ barcode.batchNumber }}</p>
+            <p *ngIf="barcode.serialNumber"><strong>Serial Number:</strong> {{ barcode.serialNumber }}</p>
+            <p *ngIf="barcode.expiryDate"><strong>Expiry Date:</strong> {{ barcode.expiryDate }}</p>
+            <p *ngIf="barcode.quantity"><strong>Quantity:</strong> {{ barcode.quantity }}</p>
+            <p *ngIf="barcode.parentBarcode"><strong>Parent:</strong> {{ barcode.parentBarcode }}</p>
+            <p *ngIf="barcode.childBarcodes && barcode.childBarcodes.length > 0">
+              <strong>Children:</strong> {{ barcode.childBarcodes.length }} items
+            </p>
+          </div>
+          <!-- Validation Error Messages -->
+          <div class="validation-errors" *ngIf="hasBarcodeValidationError(barcode)">
+            <div class="error-message" *ngFor="let error of getBarcodeValidationErrors(barcode)">
+              <ion-icon name="alert-circle" color="danger" size="small"></ion-icon>
+              <span>{{ error }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Remove Button for Misplaced Barcodes -->
+        <div class="barcode-actions" *ngIf="hasBarcodeValidationError(barcode)">
+          <ion-button 
+            (click)="removeMisplacedBarcode(i)" 
+            fill="outline" 
+            color="danger" 
+            size="small"
+            class="remove-btn">
+            <ion-icon name="trash" slot="start"></ion-icon>
+            Remove
+          </ion-button>
+        </div>
+      </div>
+    </div>
+  </div>
+</ion-content>

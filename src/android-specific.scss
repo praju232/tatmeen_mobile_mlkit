@@ -1,0 +1,82 @@
+// /* Android-specific safe area overrides */
+// /* This file contains explicit pixel values for Android devices */
+
+// /* Force explicit spacing for Android */
+// ion-app {
+//   padding-top: 24px !important; /* Status bar */
+//   padding-bottom: 48px !important; /* Navigation bar */
+// }
+
+// ion-content {
+//   --padding-top: 24px !important;
+//   --padding-bottom: 48px !important;
+//   --padding-start: 0px !important;
+//   --padding-end: 0px !important;
+// }
+
+// ion-page {
+//   padding-top: 24px !important;
+//   padding-bottom: 48px !important;
+// }
+
+// /* Header spacing */
+// ion-header {
+//   padding-top: 24px !important;
+// }
+
+// ion-toolbar {
+//   padding-top: 24px !important;
+// }
+
+// /* Footer spacing */
+// ion-footer {
+//   padding-bottom: 48px !important;
+// }
+
+// /* Tab bar spacing */
+// ion-tab-bar {
+//   padding-bottom: 48px !important;
+//   margin-bottom: 0px !important;
+// }
+
+// /* Button spacing */
+// ion-button {
+//   margin-bottom: 56px !important;
+// }
+
+// /* FAB spacing */
+// ion-fab {
+//   bottom: 56px !important;
+// }
+
+// /* Camera scanner specific */
+// .camera-scanner-container {
+//   padding-top: 24px !important;
+//   padding-bottom: 48px !important;
+//   min-height: calc(100vh - 72px) !important;
+// }
+
+// /* Force all containers to respect safe areas */
+// .container, .page-container, .main-container, .content-container {
+//   padding-top: 24px !important;
+//   padding-bottom: 48px !important;
+// }
+
+// /* Override any conflicting styles */
+// * {
+//   box-sizing: border-box;
+// }
+
+// /* Ensure proper viewport handling */
+// html {
+//   height: 100%;
+//   padding-top: 24px !important;
+//   padding-bottom: 48px !important;
+// }
+
+// body {
+//   height: 100%;
+//   padding-top: 24px !important;
+//   padding-bottom: 48px !important;
+//   margin: 0 !important;
+// }

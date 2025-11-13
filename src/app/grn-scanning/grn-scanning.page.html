@@ -1,0 +1,143 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>GRN Scanning</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="scanning-container">
+    
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-container">
+      <ion-spinner name="crescent"></ion-spinner>
+      <p>Loading GRN data...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error" class="error-container">
+      <ion-icon name="alert-circle" color="danger"></ion-icon>
+      <p>{{ error }}</p>
+    </div>
+
+    <!-- Main Scanning Interface -->
+    <div *ngIf="!loading && !error && grnData" class="scanning-interface">
+      
+      <!-- Progress Overview -->
+      <ion-card class="progress-card">
+        <ion-card-header>
+          <ion-card-title>Scanning Progress</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <div class="progress-stats">
+            <div class="stat-item">
+              <span class="stat-label">Total Boxes:</span>
+              <span class="stat-value">{{ scannedBoxes.length }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Batches Scanned:</span>
+              <span class="stat-value">{{ getTotalBatchesScanned() }}/{{ getTotalBatchesExpected() }}</span>
+            </div>
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <!-- Current Box Information -->
+      <ion-card *ngIf="currentStep === 'box'" class="current-box-card">
+        <ion-card-header>
+          <ion-card-title>Scan Box Barcode</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <div class="box-info">
+            <h3>{{ getCurrentBox()?.itemName }}</h3>
+            <p>Expected Batches: {{ getCurrentBox()?.quantity }}</p>
+            <p>Box Barcode: {{ getCurrentBox()?.barcode }}</p>
+          </div>
+          <ion-button expand="block" color="primary" (click)="scanBoxBarcode()" [disabled]="isScanning">
+            <ion-icon name="camera" slot="start"></ion-icon>
+            {{ isScanning ? 'Scanning...' : 'Scan Box Barcode(s)' }}
+          </ion-button>
+          <p class="scan-hint">Point camera at box to scan multiple barcodes at once</p>
+        </ion-card-content>
+      </ion-card>
+
+      <!-- Batch Scanning Interface -->
+      <ion-card *ngIf="currentStep === 'batch'" class="batch-scanning-card">
+        <ion-card-header>
+          <ion-card-title>Scan Batch Barcodes</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <div class="batch-info">
+            <h3>{{ getCurrentBox()?.itemName }}</h3>
+            <p>Progress: {{ getScannedBatchesCount() }}/{{ getCurrentBox()?.quantity }} batches</p>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="(getScannedBatchesCount() / (getCurrentBox()?.quantity || 1)) * 100"></div>
+            </div>
+          </div>
+          
+          <div class="scanning-actions">
+            <ion-button expand="block" color="secondary" (click)="scanBatchBarcode()" [disabled]="isScanning">
+              <ion-icon name="camera" slot="start"></ion-icon>
+              {{ isScanning ? 'Scanning...' : 'Scan Batch Barcode(s)' }}
+            </ion-button>
+            <p class="scan-hint">Point camera at batch labels to scan multiple GS1 Data Matrix codes</p>
+            
+            <ion-button expand="block" color="medium" fill="outline" (click)="goBackToBoxScanning()">
+              <ion-icon name="arrow-back" slot="start"></ion-icon>
+              Back to Box Scanning
+            </ion-button>
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <!-- Scanned Batches Display -->
+      <ion-card *ngIf="getCurrentBox()?.batches?.length" class="scanned-batches-card">
+        <ion-card-header>
+          <ion-card-title>Scanned Batches</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <div class="batches-list">
+            <div *ngFor="let batch of getCurrentBox()?.batches; let i = index" class="batch-item">
+              <div class="batch-number">{{ i + 1 }}</div>
+              <div class="batch-details">
+                <div class="batch-barcode">{{ batch.barcode }}</div>
+                <div class="batch-info">
+                  <span>Batch: {{ batch.batchNumber }}</span>
+                  <span>Expiry: {{ batch.expiryDate }}</span>
+                  <span>Qty: {{ batch.quantity }} {{ batch.primaryUnit }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <!-- All Scanned Items Summary -->
+      <ion-card *ngIf="getTotalBatchesScanned() > 0" class="summary-card">
+        <ion-card-header>
+          <ion-card-title>Scanning Summary</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <div class="summary-list">
+            <div *ngFor="let box of scannedBoxes; let i = index" class="summary-item">
+              <div class="summary-box-header">
+                <h4>{{ box.itemName }}</h4>
+                <span class="batch-count">{{ box.batches.length }}/{{ box.quantity }}</span>
+              </div>
+              <div *ngIf="box.batches.length > 0" class="summary-batches">
+                <div *ngFor="let batch of box.batches" class="summary-batch">
+                  <span class="batch-barcode">{{ batch.barcode }}</span>
+                  <span class="batch-details">{{ batch.batchNumber }} - {{ batch.quantity }} {{ batch.primaryUnit }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+    </div>
+
+  </div>
+</ion-content>

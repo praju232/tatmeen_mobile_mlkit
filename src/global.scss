@@ -1,0 +1,267 @@
+/*
+ * App Global CSS
+ * ----------------------------------------------------------------------------
+ * Put style rules here that you want to apply globally. These styles are for
+ * the entire app and not just one component. Additionally, this file can be
+ * used as an entry point to import other CSS/Sass files to be included in the
+ * output CSS.
+ * For more information on global stylesheets, visit the documentation:
+ * https://ionicframework.com/docs/layout/global-stylesheets
+ */
+
+/* Core CSS required for Ionic components to work properly */
+@import "@ionic/angular/css/core.css";
+
+/* Basic CSS for apps built with Ionic */
+@import "@ionic/angular/css/normalize.css";
+@import "@ionic/angular/css/structure.css";
+@import "@ionic/angular/css/typography.css";
+@import "@ionic/angular/css/display.css";
+
+/* Optional CSS utils that can be commented out */
+@import "@ionic/angular/css/padding.css";
+@import "@ionic/angular/css/float-elements.css";
+@import "@ionic/angular/css/text-alignment.css";
+@import "@ionic/angular/css/text-transformation.css";
+@import "@ionic/angular/css/flex-utils.css";
+
+/**
+ * Ionic Dark Mode
+ * -----------------------------------------------------
+ * For more info, please see:
+ * https://ionicframework.com/docs/theming/dark-mode
+ */
+
+/* @import "@ionic/angular/css/palettes/dark.always.css"; */
+/* @import "@ionic/angular/css/palettes/dark.class.css"; */
+@import "@ionic/angular/css/palettes/dark.system.css";
+
+/* Custom Design System */
+:root {
+  /* Colors */
+  --ion-color-primary: #000000;
+  --ion-color-primary-rgb: 0, 0, 0;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #000000;
+  --ion-color-primary-tint: #1a1a1a;
+
+  /* Accent Colors */
+  --ion-color-success: #10b981;
+  --ion-color-success-rgb: 16, 185, 129;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #0ea472;
+  --ion-color-success-tint: #28c08a;
+
+  --ion-color-danger: #ef4444;
+  --ion-color-danger-rgb: 239, 68, 68;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #d23c3c;
+  --ion-color-danger-tint: #f15757;
+
+  --ion-color-warning: #f59e0b;
+  --ion-color-warning-rgb: 245, 158, 11;
+  --ion-color-warning-contrast: #ffffff;
+  --ion-color-warning-contrast-rgb: 255, 255, 255;
+  --ion-color-warning-shade: #d8890a;
+  --ion-color-warning-tint: #f6a824;
+
+  --ion-color-info: #3b82f6;
+  --ion-color-info-rgb: 59, 130, 246;
+  --ion-color-info-contrast: #ffffff;
+  --ion-color-info-contrast-rgb: 255, 255, 255;
+  --ion-color-info-shade: #3472d8;
+  --ion-color-info-tint: #4f8ff7;
+
+  /* Background Colors */
+  --ion-background-color: #ffffff;
+  --ion-background-color-rgb: 255, 255, 255;
+
+  /* Text Colors */
+  --ion-text-color: #000000;
+  --ion-text-color-rgb: 0, 0, 0;
+  --ion-text-color-step-50: #1a1a1a;
+  --ion-text-color-step-100: #333333;
+  --ion-text-color-step-150: #4d4d4d;
+  --ion-text-color-step-200: #666666;
+  --ion-text-color-step-250: #808080;
+  --ion-text-color-step-300: #999999;
+  --ion-text-color-step-350: #b3b3b3;
+  --ion-text-color-step-400: #cccccc;
+  --ion-text-color-step-450: #e6e6e6;
+  --ion-text-color-step-500: #f0f0f0;
+  --ion-text-color-step-550: #f5f5f5;
+  --ion-text-color-step-600: #fafafa;
+  --ion-text-color-step-650: #fcfcfc;
+  --ion-text-color-step-700: #fefefe;
+  --ion-text-color-step-750: #ffffff;
+  --ion-text-color-step-800: #ffffff;
+  --ion-text-color-step-850: #ffffff;
+  --ion-text-color-step-900: #ffffff;
+  --ion-text-color-step-950: #ffffff;
+
+  /* Card Colors */
+  --ion-card-background: #ffffff;
+  --ion-card-color: #000000;
+
+  /* Border Radius */
+  --ion-border-radius: 16px;
+  --ion-border-radius-sm: 8px;
+  --ion-border-radius-md: 12px;
+  --ion-border-radius-lg: 20px;
+  --ion-border-radius-xl: 24px;
+
+  /* Spacing */
+  --ion-padding: 16px;
+  --ion-padding-sm: 8px;
+  --ion-padding-md: 12px;
+  --ion-padding-lg: 20px;
+  --ion-padding-xl: 24px;
+
+  /* Typography */
+  --ion-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+}
+
+/* Global Typography */
+* {
+  font-family: var(--ion-font-family);
+}
+
+body {
+  font-family: var(--ion-font-family);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ion-text-color);
+  background-color: var(--ion-background-color);
+}
+
+/* Card Styles */
+.warehouse-card {
+  background: var(--ion-card-background);
+  border-radius: var(--ion-border-radius);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: var(--ion-padding);
+  padding: var(--ion-padding);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.warehouse-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--ion-padding);
+  padding-bottom: var(--ion-padding-sm);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.warehouse-card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ion-text-color);
+  margin: 0;
+}
+
+.warehouse-card-subtitle {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ion-text-color-step-200);
+  margin: 4px 0 0 0;
+}
+
+/* Button Styles */
+.warehouse-button {
+  --border-radius: var(--ion-border-radius);
+  --padding-start: var(--ion-padding);
+  --padding-end: var(--ion-padding);
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  font-weight: 500;
+  text-transform: none;
+  font-size: 14px;
+}
+
+.warehouse-button-primary {
+  --background: var(--ion-color-primary);
+  --color: var(--ion-color-primary-contrast);
+}
+
+.warehouse-button-success {
+  --background: var(--ion-color-success);
+  --color: var(--ion-color-success-contrast);
+}
+
+/* Icon Styles */
+.warehouse-icon {
+  font-size: 24px;
+  margin-right: var(--ion-padding-sm);
+}
+
+.warehouse-icon-large {
+  font-size: 32px;
+  margin-right: var(--ion-padding);
+}
+
+/* Status Indicators */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: var(--ion-border-radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-success {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--ion-color-success);
+}
+
+.status-danger {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--ion-color-danger);
+}
+
+.status-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--ion-color-warning);
+}
+
+.status-info {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--ion-color-info);
+}
+
+/* Grid Layouts */
+.warehouse-grid {
+  display: grid;
+  gap: var(--ion-padding);
+}
+
+.warehouse-grid-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.warehouse-grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.warehouse-grid-4 {
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .warehouse-grid-2,
+  .warehouse-grid-3,
+  .warehouse-grid-4 {
+    grid-template-columns: 1fr;
+  }
+  
+  .warehouse-card {
+    margin: var(--ion-padding-sm);
+  }
+}

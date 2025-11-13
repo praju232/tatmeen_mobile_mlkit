@@ -1,0 +1,96 @@
+<ion-content [fullscreen]="true" class="login-content">
+  <div class="login-container">
+    <!-- Header Section -->
+    <div class="login-header">
+      <div class="logo-container">
+        <img src="https://esarwa.com/assets/homepage/e-logo-2.svg" alt="Logo" class="company-logo" />
+      </div>
+      <div class="welcome-section">
+        <h1 class="welcome-title">Welcome Back</h1>
+      </div>
+    </div>
+
+    <!-- Login Form Card -->
+    <div class="login-card">
+      <div class="card-header">
+        <h2 class="card-title">Warehouse Automation System</h2>
+      </div>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onLogin()" class="login-form">
+        <!-- Username Field -->
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <div class="input-container">
+            <ion-icon name="person-outline" class="input-icon"></ion-icon>
+            <ion-input 
+              type="text" 
+              formControlName="username" 
+              placeholder="Enter your username"
+              autocomplete="username"
+              class="form-input">
+            </ion-input>
+          </div>
+        </div>
+
+        <!-- Password Field -->
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="input-container">
+            <ion-icon name="lock-closed-outline" class="input-icon"></ion-icon>
+            <ion-input 
+              [type]="showPassword ? 'text' : 'password'" 
+              formControlName="password" 
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              class="form-input">
+            </ion-input>
+            <ion-button 
+              fill="clear" 
+              size="small" 
+              type="button" 
+              (click)="togglePassword()" 
+              class="password-toggle">
+              <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="error" class="error-container">
+          <ion-icon name="alert-circle-outline" class="error-icon"></ion-icon>
+          <span class="error-text">{{ error }}</span>
+        </div>
+
+        <!-- Login Button -->
+        <ion-button 
+          expand="block" 
+          type="submit" 
+          [disabled]="loginForm.invalid || loading" 
+          class="login-button">
+          <ion-spinner *ngIf="loading" name="crescent" class="button-spinner"></ion-spinner>
+          <ion-icon *ngIf="!loading" name="log-in-outline" class="button-icon"></ion-icon>
+          <span *ngIf="!loading" class="button-text">Sign In</span>
+        </ion-button>
+      </form>
+
+      <!-- Footer Links -->
+      <div class="form-footer">
+        <div class="remember-me">
+          <ion-checkbox></ion-checkbox>
+          <label class="checkbox-label">Remember me</label>
+        </div>
+        <a href="#" class="forgot-password">Forgot Password?</a>
+      </div>
+    </div>
+
+    <!-- Bottom Section -->
+    <div class="login-footer">
+      <p class="footer-text">© 2024 Esarwa. All rights reserved.</p>
+      <div class="footer-links">
+        <a href="#" class="footer-link">Privacy Policy</a>
+        <span class="divider">•</span>
+        <a href="#" class="footer-link">Terms of Service</a>
+      </div>
+    </div>
+  </div>
+</ion-content>

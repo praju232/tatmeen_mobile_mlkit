@@ -1,0 +1,785 @@
+<ion-header [translucent]="true">
+  <ion-toolbar class="grn-toolbar">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" fill="clear" color="medium">
+        <ion-icon name="arrow-back" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="grn-title">
+      
+      <span *ngIf="listType === 2">Pickup Tasks</span>
+      <span *ngIf="!listType || listType === 1">Putaway Tasks</span>
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="grn-content">
+  <div class="grn-container">
+    <!-- GRN Reference Card -->
+    <!-- <div *ngIf="!loading && !error && uniqueGrnRefs.length" class="grn-reference-card">
+      <div class="reference-header">
+        <ion-icon name="document-text-outline" class="reference-icon"></ion-icon>
+        <div class="reference-info">
+          <ng-container *ngIf="listType === 2 && requition_no">
+            <h3 class="reference-title">Invoice No: {{ requition_no }}</h3>
+          </ng-container>
+          <ng-container *ngIf="!listType || listType === 1">
+            <h3 class="reference-title">GRN: {{ grnRef }}</h3>
+          </ng-container>
+          <p class="reference-subtitle">Document Reference</p>
+        </div>
+      </div>
+    </div> -->
+    
+    <!-- Quick Actions Section -->
+    <!-- <div *ngIf="!loading && !error && uniqueGrnRefs.length" class="quick-actions-section">
+      <div class="action-card primary-action" (click)="startSequentialTaskScanning()">
+        <div class="action-icon">
+          <ion-icon name="list-outline"></ion-icon>
+        </div>
+        <div class="action-content">
+          <h4 class="action-title">Start Aggregation Scanning</h4>
+          <p class="action-description">Scan each item sequentially</p>
+          <div class="action-badge">{{ tasks?.length || 0 }} items</div>
+        </div>
+        <div class="action-arrow">
+          <ion-icon name="chevron-forward-outline"></ion-icon>
+        </div>
+      </div>
+    </div> -->
+
+      <!-- Step-by-Step Scanning Workflow -->
+      <div class="scanning-workflow" *ngIf="isTaskScanningMode && currentTask">
+        
+        <!-- Task Header -->
+        <div class="task-header-card">
+          <div class="task-info">
+            <ion-icon name="cube" color="primary"></ion-icon>
+            <div class="task-details">
+              <h3>{{ currentTask?.itemName }}</h3>
+              <p class="task-meta">
+                <span class="box-info">Box {{ currentBox?.boxNumber }} of {{ currentBox?.totalBoxes }}</span>
+                <span class="separator">•</span>
+                <span class="quantity-info">Quantity: {{ currentTask?.quantity }}</span>
+              </p>
+            </div>
+          </div>
+          <ion-button (click)="backToTaskList()" fill="clear" color="medium" size="small">
+            <ion-icon name="arrow-back" slot="start"></ion-icon>
+            Back
+          </ion-button>
+        </div>
+   
+        <div class="workflow-card compact">
+        <div class="workflow-header compact">
+          <ion-icon name="list" color="primary"></ion-icon>
+          <h3>Putaway Workflow</h3>
+          <div class="progress-info">
+            <span class="completed-count">{{ currentBox?.boxNumber}}</span>/<span class="total-count">{{ getTotalBoxes() }}</span>
+          </div>
+        </div>
+        
+        <!-- Step 1: Box Confirmation -->
+        <div class="workflow-step compact" [class.completed]="currentScanningStep === 'box_confirmed' || currentScanningStep === 'batches_confirmed' || currentScanningStep === 'location_selected' || currentScanningStep === 'box_submitted'" [class.active]="!currentScanningStep">
+          <div class="step-header compact">
+            <div class="step-icon">
+              <div class="step-number" *ngIf="currentScanningStep !== 'box_confirmed' && currentScanningStep !== 'batches_confirmed' && currentScanningStep !== 'location_selected' && currentScanningStep !== 'box_submitted'">1</div>
+              <ion-icon *ngIf="currentScanningStep === 'box_confirmed' || currentScanningStep === 'batches_confirmed' || currentScanningStep === 'location_selected' || currentScanningStep === 'box_submitted'" name="checkmark-circle" color="success" class="step-check"></ion-icon>
+            </div>
+            <div class="step-title">
+              <h4>Scan Box Barcode</h4>
+              <p class="step-description" *ngIf="!currentScanningStep">Point camera at box barcode</p>
+            </div>
+          </div>
+          
+          <div class="step-content">
+            <!-- Scan button - always visible -->
+            <ion-button (click)="scanTaskBoxBarcode()" [color]="!currentScanningStep ? 'primary' : 'medium'" expand="block" [fill]="!currentScanningStep ? 'solid' : 'outline'">
+              <ion-icon name="camera" slot="start"></ion-icon>
+              {{ !currentScanningStep ? 'Scan Box Barcode' : 'Rescan Box' }}
+            </ion-button>
+
+            <!-- Show scanned data when box is confirmed -->
+            <div class="step-data" *ngIf="currentScanningStep === 'box_confirmed' || currentScanningStep === 'batches_confirmed' || currentScanningStep === 'location_selected' || currentScanningStep === 'box_submitted'">
+              <div class="data-row">
+                <ion-icon name="barcode-outline" color="primary"></ion-icon>
+                <div class="data-content">
+                  <span class="data-label">Box Barcode</span>
+                  <span class="data-value">{{ scannedBoxBarcode }}</span>
+                </div>
+              </div>
+              <div class="data-row" *ngIf="matchedBoxName">
+                <ion-icon name="cube-outline" color="primary"></ion-icon>
+                <div class="data-content">
+                  <span class="data-label">Product</span>
+                  <span class="data-value">{{ matchedBoxName }}</span>
+                </div>
+              </div>
+            </div>
+          
+            <!-- Proceed button -->
+            <ion-button *ngIf="currentScanningStep === 'box_confirmed'" (click)="proceedToBatchScanning()" color="success" expand="block">
+              <ion-icon name="arrow-forward" slot="start"></ion-icon>
+              Proceed to Batch Scanning
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Step 2: Batch Scanning -->
+        <div class="workflow-step compact" [class.completed]="currentScanningStep === 'batches_confirmed' || currentScanningStep === 'location_selected' || currentScanningStep === 'box_submitted'">
+          <div class="step-header compact">
+            <div class="step-number" *ngIf="currentScanningStep !== 'batches_confirmed' && currentScanningStep !== 'location_selected' && currentScanningStep !== 'box_submitted'">2</div>
+            <div class="step-number" *ngIf="currentScanningStep === 'batches_confirmed' || currentScanningStep === 'location_selected' || currentScanningStep === 'box_submitted'">2</div>
+            <h4>Batches</h4>
+            <ion-icon *ngIf="currentScanningStep === 'batches_confirmed' || currentScanningStep === 'location_selected' || currentScanningStep === 'box_submitted'" name="checkmark-circle" color="success"></ion-icon>
+          </div>
+          <div class="step-content" *ngIf="currentScanningStep === 'batches_confirmed' || currentScanningStep === 'location_selected' || currentScanningStep === 'box_submitted'">
+            <div class="step-data">
+              <p><strong>Batches Scanned:</strong> {{ scannedBarcodes.length }}</p>
+              
+              <!-- Warning when no batches scanned -->
+              <div *ngIf="scannedBarcodes.length === 0" class="no-batches-warning">
+                <ion-icon name="warning" color="warning"></ion-icon>
+                <p>No batches scanned yet. Please scan at least one batch to continue.</p>
+              </div>
+              
+              <!-- Batches preview when batches are scanned -->
+              <div class="batches-preview" *ngIf="scannedBarcodes.length > 0">
+                <div class="batch-item" *ngFor="let batch of scannedBarcodes.slice(0, 3); let i = index">
+                  <span class="batch-number">{{ i + 1 }}</span>
+                  <span class="batch-serial">{{ batch.serialNumber || batch.gtin || 'N/A' }}</span>
+                </div>
+                <p *ngIf="scannedBarcodes.length > 3" class="more-batches">... and {{ scannedBarcodes.length - 3 }} more</p>
+              </div>
+            </div>
+            <ion-button *ngIf="currentScanningStep === 'batches_confirmed'" 
+                       (click)="proceedToLocationSelection()" 
+                       color="success" 
+                       expand="block"
+                       [disabled]="scannedBarcodes.length === 0">
+              <ion-icon name="location" slot="start"></ion-icon>
+              Proceed to Location Selection
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Step 3: Location Selection -->
+        <div class="workflow-step compact" [class.completed]="currentScanningStep === 'location_selected' || currentScanningStep === 'box_submitted'">
+          <div class="step-header compact">
+            <div class="step-number" *ngIf="currentScanningStep !== 'location_selected' && currentScanningStep !== 'box_submitted'">3</div>
+            <div class="step-number" *ngIf="currentScanningStep === 'location_selected' || currentScanningStep === 'box_submitted'">3</div>
+            <h4>Location</h4>
+            <ion-icon *ngIf="currentScanningStep === 'location_selected' || currentScanningStep === 'box_submitted'" name="checkmark-circle" color="success"></ion-icon>
+          </div>
+          <div class="step-content compact" *ngIf="currentScanningStep === 'location_selected' || currentScanningStep === 'box_submitted'">
+            <div class="step-data compact" *ngIf="selectedLocation">
+              <p><strong>Location:</strong> {{ selectedLocation.name }} ({{ selectedLocation.barcode }})</p>
+            </div>
+            <div class="step-actions compact" *ngIf="currentScanningStep === 'location_selected'">
+              <ion-button (click)="showLocationSelection()" color="primary" fill="outline" size="small">
+                <ion-icon name="location" slot="start"></ion-icon>
+                Choose
+              </ion-button>
+              <ion-button (click)="captureLocationBarcode()" color="secondary" fill="outline" size="small">
+                <ion-icon name="scan" slot="start"></ion-icon>
+                Scan
+              </ion-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4: Box Submission -->
+        <div class="workflow-step" [class.completed]="currentScanningStep === 'box_submitted'">
+          <div class="step-header">
+            <div class="step-number" *ngIf="currentScanningStep !== 'box_submitted'">4</div>
+            <div class="step-number" *ngIf="currentScanningStep === 'box_submitted'">4</div>
+            <h4>Box Submission</h4>
+            <ion-icon *ngIf="currentScanningStep === 'box_submitted'" name="checkmark-circle" color="success"></ion-icon>
+          </div>
+          <div class="step-content" *ngIf="currentScanningStep === 'box_submitted'">
+            <div class="step-data">
+              <p><strong>Box Submitted Successfully!</strong></p>
+              <p>Box: {{ scannedBoxBarcode }} with {{ scannedBarcodes.length }} batches</p>
+            </div>
+          </div>
+          <div class="step-actions" *ngIf="currentScanningStep === 'location_selected' && selectedLocation">
+            <ion-button (click)="submitCurrentBoxData()" 
+                       color="success" 
+                       expand="block" 
+                       size="medium"
+                       [disabled]="scannedBarcodes.length === 0">
+              <ion-icon name="checkmark" slot="start"></ion-icon>
+              Submit Box {{ currentBox?.boxNumber }}
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Next Box Option or Completion -->
+        <div class="workflow-step compact" *ngIf="currentScanningStep === 'ready_for_next_box'">
+          <div class="step-header compact">
+            <div class="step-number">5</div>
+            <h4 *ngIf="currentBox?.boxNumber < getTotalBoxes()">Next Box</h4>
+            <h4 *ngIf="currentBox?.boxNumber >= getTotalBoxes()">Completed</h4>
+            <ion-icon *ngIf="currentBox?.boxNumber >= getTotalBoxes()" name="checkmark-circle" color="success"></ion-icon>
+          </div>
+          <div class="step-content compact">
+            <div class="step-data compact" *ngIf="currentBox?.boxNumber < getTotalBoxes()">
+              <p><strong>Ready for Next Box</strong></p>
+              <p>{{ getTotalBoxes() - currentBox?.boxNumber }} more boxes to process</p>
+            </div>
+            <div class="step-data compact" *ngIf="currentBox?.boxNumber >= getTotalBoxes()">
+              <p><strong>All Boxes Completed!</strong></p>
+              <p>Successfully processed {{ currentBox?.boxNumber }} boxes</p>
+            </div>
+            <div class="step-actions compact" *ngIf="currentBox?.boxNumber < getTotalBoxes()">
+              <ion-button (click)="startNextBox()" color="primary" size="small">
+                <ion-icon name="camera" slot="start"></ion-icon>
+                Next Box
+              </ion-button>
+              <ion-button (click)="clearCurrentBoxData()" color="medium" fill="outline" size="small">
+                <ion-icon name="close" slot="start"></ion-icon>
+                Finish
+              </ion-button>
+            </div>
+            <div class="step-actions compact" *ngIf="currentBox?.boxNumber >= getTotalBoxes()">
+              <ion-button (click)="clearCurrentBoxData()" color="success" size="small">
+                <ion-icon name="checkmark" slot="start"></ion-icon>
+                Complete
+              </ion-button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- All Tasks Completed Interface -->
+    <div *ngIf="!isTaskScanningMode && taskScanningData.length > 0" class="completion-interface">
+      <div class="completion-header">
+        <ion-icon name="checkmark-circle" color="success" size="large"></ion-icon>
+        <h3>All Items Completed!</h3>
+        <p>Successfully scanned {{ taskScanningData.length }} tasks</p>
+      </div>
+
+      <div class="completion-summary">
+        <h4>Scanning Summary</h4>
+        <div class="summary-stats">
+          <div class="stat-item">
+            <span class="stat-number">{{ taskScanningData.length }}</span>
+            <span class="stat-label">Total Items Completed</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">{{ getTotalScannedBarcodes() }}</span>
+            <span class="stat-label">Total Batches</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="completion-actions">
+        <ion-button (click)="placeItemsInLocations()" color="success" expand="block" size="large">
+          <ion-icon name="location" slot="start"></ion-icon>
+          Place Items in Locations
+        </ion-button>
+        <ion-button (click)="viewScanningSummary()" color="primary" expand="block" fill="outline">
+          <ion-icon name="list" slot="start"></ion-icon>
+          View Summary
+        </ion-button>
+        <ion-button (click)="startNewScanningSession()" color="medium" expand="block" fill="clear">
+          <ion-icon name="refresh" slot="start"></ion-icon>
+          Start New Session
+        </ion-button>
+      </div>
+    </div>
+    <!-- Warehouse Location Selector Overlay -->
+    <div class="location-overlay" *ngIf="showLocationSelector" (click)="hideLocationSelection()">
+      <div class="location-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Select Warehouse Location</h3>
+          <ion-button (click)="hideLocationSelection()" fill="clear" color="medium" size="small">
+            <ion-icon name="close" slot="icon-only"></ion-icon>
+          </ion-button>
+        </div>
+        
+        <div class="modal-content">
+          <p class="placement-info">
+            Place {{ scannedBarcodes.length }} barcode(s) in warehouse location:
+          </p>
+          
+          <div class="location-list">
+            <ion-card 
+              *ngFor="let location of availableLocations" 
+              class="location-card"
+              [class.selected]="selectedLocation === location.barcode"
+              (click)="selectedLocation = location.barcode">
+              <ion-card-content>
+                <div class="location-info">
+                  <h4>{{ location.name }}</h4>
+                  <p class="location-code">{{ location.barcode }}</p>
+                  <p class="location-description" *ngIf="location.description">{{ location.description }}</p>
+                </div>
+                <ion-icon 
+                  name="checkmark-circle" 
+                  *ngIf="selectedLocation === location.barcode"
+                  color="success">
+                </ion-icon>
+              </ion-card-content>
+            </ion-card>
+          </div>
+        </div>
+        
+        <div class="modal-actions">
+          <ion-button 
+            (click)="hideLocationSelection()" 
+            fill="outline" 
+            color="medium" 
+            expand="block">
+            Cancel
+          </ion-button>
+          <ion-button 
+            (click)="placeItemsInLocations()" 
+            [disabled]="!selectedLocation || isPlacingBarcodes"
+            color="success" 
+            expand="block">
+            <ion-icon name="location" slot="start"></ion-icon>
+            {{ isPlacingBarcodes ? 'Placing...' : 'Place Barcodes' }}
+          </ion-button>
+        </div>
+      </div>
+    </div>
+    <!-- Completion Summary -->
+    <div *ngIf="!isTaskScanningMode && allTasksCompleted()" class="completion-section">
+      <div class="completion-card">
+        <div class="completion-header">
+          <div class="completion-icon">
+            <ion-icon name="checkmark-circle-outline"></ion-icon>
+          </div>
+          <h2 class="completion-title">All Tasks Completed!</h2>
+          <p class="completion-message">All putaway tasks have been successfully processed.</p>
+        </div>
+        
+        <div class="completion-stats">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <ion-icon name="cube-outline"></ion-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-number">{{ getTotalBoxes() }}</div>
+              <div class="stat-label">Total Boxes</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <ion-icon name="barcode-outline"></ion-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-number">{{ getTotalScannedBarcodes() }}</div>
+              <div class="stat-label">Items Scanned</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="completion-actions">
+          <ion-button (click)="startNewScanningSession()" class="new-session-btn">
+            <ion-icon name="refresh-outline" slot="start"></ion-icon>
+            Start New Session
+          </ion-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Task List Interface -->
+    <div *ngIf="!isTaskScanningMode && !allTasksCompleted()" class="task-list-section">
+      <!-- Task List Header -->
+      <div class="task-header-card">
+        <div class="header-content">
+          <div class="header-info">
+            <h2 class="header-title">
+              <span *ngIf="listType === 1">Putaway Tasks</span>
+              <span *ngIf="listType === 2">Pickup Tasks</span>
+            </h2>
+            <p class="header-subtitle">Manage your warehouse tasks</p>
+          </div>
+          <div class="header-stats">
+            <div class="stat-item" *ngIf="currentBox?.boxNumber">
+              <div class="stat-number">{{ currentBox?.boxNumber }}</div>
+              <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">{{ getTotalBoxes() }}</div>
+              <div class="stat-label">Total</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">{{ tasks?.length || 0 }}</div>
+              <div class="stat-label">Items</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Task Cards -->
+      <div class="task-cards-container">
+        <div *ngFor="let task of tasks; let i = index" class="task-card" 
+             [class.completed]="isTaskCompleted(task)"
+             (click)="selectTaskForScanning(i)">
+          
+          <div class="task-card-header">
+            <div class="task-icon">
+              <ion-icon [name]="isTaskCompleted(task) ? 'checkmark-circle' : 'cube-outline'" 
+                       [color]="isTaskCompleted(task) ? 'success' : 'primary'"></ion-icon>
+            </div>
+            <div class="task-info">
+              <h3 class="task-title">{{ task.itemName }}</h3>
+              <p class="task-id">#{{ task.id }}</p>
+            </div>
+            <div class="task-status">
+              <div class="status-badge" [class.completed]="isTaskCompleted(task)">
+                {{ isTaskCompleted(task) ? 'Completed' : 'Pending' }}
+              </div>
+            </div>
+          </div>
+          
+          <div class="task-details">
+            <div class="detail-item">
+              <ion-icon name="cube-outline" class="detail-icon"></ion-icon>
+              <div class="detail-content">
+                <span class="detail-label">Quantity</span>
+                <span class="detail-value">{{ task.quantity }} boxes</span>
+              </div>
+            </div>
+            <div class="detail-item">
+              <ion-icon name="document-outline" class="detail-icon"></ion-icon>
+              <div class="detail-content">
+                <span class="detail-label">GRN Ref</span>
+                <span class="detail-value">{{ task.grnRef }}</span>
+              </div>
+            </div>
+            <div class="detail-item">
+              <ion-icon name="location-outline" class="detail-icon"></ion-icon>
+              <div class="detail-content">
+                <span class="detail-label">Location</span>
+                <span class="detail-value">{{ task.fromLocation || 'Not assigned' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="task-progress-section">
+            <div class="progress-header">
+              <span class="progress-text">{{ getTaskCompletedBoxes(task) }} of {{ task.quantity }} boxes</span>
+              <span class="progress-percentage">{{ getTaskProgress(task) }}%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="getTaskProgress(task)"></div>
+            </div>
+          </div>
+
+          <div class="task-actions">
+            <ion-button *ngIf="!isTaskCompleted(task)" 
+                       (click)="selectTaskForScanning(i); $event.stopPropagation()" 
+                       class="start-scanning-btn">
+              <ion-icon name="camera-outline" slot="start"></ion-icon>
+              Start Scanning
+            </ion-button>
+            <ion-button *ngIf="isTaskCompleted(task)" 
+                       class="completed-btn" 
+                       disabled>
+              <ion-icon name="checkmark-outline" slot="start"></ion-icon>
+              Completed
+            </ion-button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Task Scanning Interface -->
+    <div *ngIf="isTaskScanningMode && currentTask" class="scanning-interface">
+      
+
+      <!-- Box Progress -->
+      <!-- <div class="box-progress-card">
+        <div class="progress-header">
+          <h4>Current Box Progress</h4>
+          <span class="box-number">Box {{ currentBox?.boxNumber }}</span>
+        </div>
+        <div class="box-progress-bar">
+          <div class="box-progress-fill" [style.width.%]="(currentBox?.boxNumber / currentBox?.totalBoxes) * 100"></div>
+        </div>
+        <p class="box-status">{{ currentBox?.totalBoxes - currentBox?.boxNumber + 1 }} boxes remaining</p>
+      </div> -->
+
+      <!-- Scanning Steps -->
+      <div class="scanning-steps">
+        <!-- Step 1: Scan Box Barcode -->
+        <!-- <div class="step-card">
+          <div class="step-header">
+            <div class="step-number">1</div>
+            <h5>Scan Box Barcode</h5>
+          </div>
+          <div class="step-content">
+            <div class="input-group">
+              <ion-input 
+                [(ngModel)]="scannedBoxBarcode" 
+                placeholder="Box barcode will appear here"
+                [readonly]="true"
+                class="barcode-input">
+              </ion-input>
+              <ion-button (click)="scanTaskBoxBarcode()" color="primary" fill="solid">
+                <ion-icon name="camera" slot="start"></ion-icon>
+                Scan
+              </ion-button>
+            </div>
+            <div *ngIf="boxBarcodeError" class="error-message">{{ boxBarcodeError }}</div>
+            <div *ngIf="isScanning" class="scanning-indicator">
+              <ion-spinner name="crescent"></ion-spinner>
+              <span>Scanning...</span>
+            </div>
+          </div>
+        </div> -->
+
+        <!-- Step 2: Scan Batches -->
+        <!-- <div class="step-card" *ngIf="scannedBoxBarcode">
+          <div class="step-header">
+            <div class="step-number">2</div>
+            <h5>Scan Item Batches</h5>
+          </div>
+          <div class="step-content">
+            <ion-button (click)="startTaskBarcodeScanning()" color="success" expand="block" size="large">
+              <ion-icon name="camera" slot="start"></ion-icon>
+              Scan Item Batches
+            </ion-button>
+            <p class="step-description">Scan all individual items in this box</p>
+          </div>
+        </div>
+
+        <div class="step-card" *ngIf="scannedBoxBarcode">
+          <div class="step-header">
+            <div class="step-number">3</div>
+            <h5>Select Location</h5>
+          </div>
+          <div class="step-content">
+            <div class="location-selection">
+              <div *ngIf="!selectedLocation" class="location-prompt">
+                <p>Please select a location for this box:</p>
+                <div class="location-options">
+                  <ion-button (click)="showLocationSelection()" color="primary" fill="outline" expand="block">
+                    <ion-icon name="location" slot="start"></ion-icon>
+                    Choose Location
+                  </ion-button>
+                  <ion-button (click)="captureLocationBarcode()" color="secondary" fill="outline" expand="block">
+                    <ion-icon name="scan" slot="start"></ion-icon>
+                    Scan Location Barcode
+                  </ion-button>
+                </div>
+              </div>
+              
+              <div *ngIf="selectedLocation" class="selected-location">
+                <div class="location-info">
+                  <h6>{{ selectedLocation.name }}</h6>
+                  <p>{{ selectedLocation.description || 'No description available' }}</p>
+                  <span class="location-barcode">Barcode: {{ selectedLocation.barcode }}</span>
+                </div>
+                <ion-button (click)="showLocationSelection()" color="medium" fill="clear" size="small">
+                  Change
+                </ion-button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-card" *ngIf="scannedBoxBarcode">
+          <div class="step-header">
+            <div class="step-number">4</div>
+            <h5>Submit Box Data</h5>
+          </div>
+          <div class="step-content">
+            <div class="submission-summary">
+              <div class="summary-item">
+                <span class="label">Box Barcode:</span>
+                <span class="value">{{ scannedBoxBarcode }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">Items Scanned:</span>
+                <span class="value">{{ scannedBarcodes.length }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">Location:</span>
+                <span class="value">{{ getLocationInfo() }}</span>
+              </div>
+              <div class="summary-item" *ngIf="currentBox?.productName">
+                <span class="label">Product:</span>
+                <span class="value">{{ currentBox.productName }}</span>
+              </div>
+            </div>
+            
+            <ion-button (click)="submitCurrentBoxData()" 
+                       color="success" 
+                       expand="block" 
+                       size="large"
+                       [disabled]="scannedBarcodes.length === 0 && !selectedLocation">
+              <ion-icon name="checkmark" slot="start"></ion-icon>
+              Submit Box {{ currentBox?.boxNumber }}
+            </ion-button>
+          </div>
+        </div> -->
+      </div>
+    </div>
+
+    <!-- Location Selection Modal -->
+    <div *ngIf="showLocationModal" class="location-modal-overlay" (click)="closeLocationModal()">
+      <div class="location-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Select Location</h3>
+          <ion-button (click)="closeLocationModal()" fill="clear" color="medium">
+            <ion-icon name="close"></ion-icon>
+          </ion-button>
+        </div>
+        
+        <div class="modal-content">
+          <div class="search-section">
+            <ion-input 
+              [(ngModel)]="locationSearchTerm" 
+              placeholder="Search locations..."
+              class="search-input">
+              <ion-icon name="search" slot="start"></ion-icon>
+            </ion-input>
+          </div>
+          
+          <div class="locations-list">
+            <div *ngFor="let location of filteredLocations" 
+                 class="location-item"
+                 (click)="selectLocation(location)">
+              <div class="location-details">
+                <h6>{{ location.name }}</h6>
+                <p>{{ location.description || 'No description available' }}</p>
+                <span class="location-barcode">Barcode: {{ location.barcode }}</span>
+              </div>
+              <div class="location-capacity">
+                <span class="capacity-label">Capacity:</span>
+                <span class="capacity-value">{{ location.capacity }}</span>
+              </div>
+            </div>
+            
+            <div *ngIf="filteredLocations.length === 0" class="no-locations">
+              <ion-icon name="location-outline" color="medium"></ion-icon>
+              <p>No locations found</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    
+    <!-- <div class="custom-input-group">
+      <label class="custom-label">ITEM <span class="required">*</span></label>
+      <div class="input-icon-wrapper">
+        <ion-input name="item" class="custom-input" placeholder="Fill your item" required [(ngModel)]="itemBarcode" (ionInput)="onItemBarcodeChange($event.target.value?.toString())"></ion-input>
+        <button type="button" (click)="scanItemBarcode()" style="background:none;border:none;padding:0;margin:0;cursor:pointer;">
+          <i class="fa-solid fa-barcode barcode-icon"></i>
+        </button>
+      </div>
+      <div *ngIf="itemBarcodeError" class="error-message">{{ itemBarcodeError }}</div>
+      <div *ngIf="confirmedQuantity && confirmedName" class="confirmed-qty-name">
+        <span>Quantity: {{ confirmedQuantity }}/{{ currentItemQuantity }}</span>
+        <span>Name: {{ confirmedName }}</span>
+      </div>
+    </div> -->
+    <!-- <div class="custom-input-group">
+      <label class="custom-label">LOCATION <span class="required">*</span></label>
+      <div class="input-icon-wrapper">
+        <ion-input name="location" class="custom-input" placeholder="Fill your location" required [(ngModel)]="locationBarcode" (ionInput)="onLocationBarcodeChange($event.target.value?.toString())" [disabled]="!matchedItemName"></ion-input>
+        <button type="button" (click)="scanLocationBarcode()" style="background:none;border:none;padding:0;margin:0;cursor:pointer;">
+          <i class="fa-solid fa-barcode barcode-icon"></i>
+        </button>
+      </div>
+      <div *ngIf="locationError" class="error-message">{{ locationError }}</div>
+    </div> -->
+    <!-- DYNAMICALLY UPDATED TABLE FOR CONFIRMED ITEMS -->
+    <div *ngIf="confirmedItems.length > 0" class="confirmed-items-table-card">
+      <table class="confirmed-items-table">
+        <thead>
+          <tr>
+            <th *ngIf="hasConfirmedItemProperty('name')">Item Name</th>
+            <!--<th *ngIf="hasConfirmedItemProperty('barcode')">Barcode</th>-->
+            <!--<th *ngIf="hasConfirmedItemProperty('total')">Quantity</th>-->
+            <th *ngIf="hasConfirmedItemProperty('quantity')">Entered Qty</th>
+            <th>Remaining Qty</th>
+            <th *ngIf="hasConfirmedItemProperty('locationName')">Location Name</th>
+            <th *ngIf="hasConfirmedItemProperty('status')">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of confirmedItems">
+            <td *ngIf="item.name">{{ item.name }}</td>
+            <!--<td *ngIf="item.barcode">{{ item.barcode }}</td>-->
+            <!--<td *ngIf="item.total">{{ item.total }}</td>-->
+            <td *ngIf="item.quantity">{{ item.quantity }}</td>
+            <td>{{ item['remaning'] }}</td>
+            <td *ngIf="item.locationName">{{ item.locationName }}</td>
+            <td *ngIf="item.status">
+              <span class="status-dot" [class.filled]="item.status === 'item' || item.status === 'both'"></span>
+              <span class="status-dot" [class.filled]="item.status === 'both'"></span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- END DYNAMIC TABLE -->
+    <!-- <div *ngIf="showQuantityModal" class="quantity-modal-backdrop">
+      <div class="quantity-modal ionic-modal">
+        <div class="modal-header">
+          <h3>Enter Quantity</h3>
+          <button class="close-btn" (click)="closeQuantityModal()">
+            <ion-icon name="close"></ion-icon>
+          </button>
+        </div>
+        <div class="modal-content">
+          <div><strong>Item:</strong> {{ matchedItemName }}</div>
+          <div><strong>Total available:</strong> {{ getRemainingQty(matchedItemName) }}</div>
+          <input type="number" min="1" [max]="getRemainingQty(matchedItemName)" [(ngModel)]="manualQuantity" (input)="onQuantityInputChange($event)" placeholder="Enter quantity" />
+          <div *ngIf="quantityModalError" class="error-message">{{ quantityModalError }}</div>
+        </div>
+        <div class="modal-actions">
+          <ion-button expand="block" color="primary" (click)="confirmQuantity()" [disabled]="!!quantityModalError || !manualQuantity">Add</ion-button>
+          <button class="manual-close-btn" type="button" (click)="closeQuantityModal()">
+            <i class="fa-solid fa-xmark"></i> Close
+          </button>
+        </div>
+      </div>
+    </div> -->
+    <!-- <div *ngIf="matchedLocations.length" class="location-table-card">
+      <table class="location-table">
+        <thead>
+          <tr>
+            <th>Location Name</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let loc of matchedLocations">
+            <td>{{ loc.name }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div> -->
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-section">
+      <ion-spinner name="crescent" class="loading-spinner"></ion-spinner>
+      <p class="loading-text">Loading tasks...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error" class="error-section">
+      <div class="error-card">
+        <ion-icon name="alert-circle-outline" class="error-icon"></ion-icon>
+        <h3 class="error-title">Error</h3>
+        <p class="error-message">{{ error }}</p>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && !error && !tasks.length" class="empty-section">
+      <div class="empty-card">
+        <ion-icon name="cube-outline" class="empty-icon"></ion-icon>
+        <h3 class="empty-title">No tasks found</h3>
+        <p class="empty-message">No putaway tasks are available at the moment.</p>
+      </div>
+    </div>
+  </div>
+</ion-content> 

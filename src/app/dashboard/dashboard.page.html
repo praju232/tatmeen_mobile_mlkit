@@ -1,0 +1,89 @@
+<ion-header [translucent]="true">
+  <ion-toolbar class="dashboard-toolbar" style="padding-top: 25px;">
+    <ion-title class="dashboard-title">
+      Warehouse Dashboard
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="onLogout()" class="logout-btn" fill="clear">
+        <ion-icon name="log-out-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="dashboard-content">
+  <!-- Welcome Section -->
+  <div class="welcome-section" style="margin: 14px;">
+    <div class="welcome-card">
+      <div class="user-info">
+        <h2 class="welcome-text">Welcome back,</h2>
+        <h1 class="username">Admin</h1>
+        <p class="user-role">Warehouse Manager</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions Section -->
+  <div class="quick-actions-section" style="margin: 14px;">
+    <h3 class="section-title">Quick Actions</h3>
+    <div class="actions-grid">
+      <div class="action-card putaway-card" (click)="onPutAway()">
+        <div class="card-icon putaway-icon">
+          <ion-icon name="cube-outline"></ion-icon>
+        </div>
+        <div class="card-content">
+          <h4 class="card-title">Put Away</h4>
+          <p class="card-description">Move received items to storage</p>
+          <div class="card-value">{{ putawayCount }} items</div>
+        </div>
+      </div>
+
+      <div class="action-card pickup-card" (click)="onPickup()">
+        <div class="card-icon pickup-icon">
+          <ion-icon name="bag-outline"></ion-icon>
+        </div>
+        <div class="card-content">
+          <h4 class="card-title">Pick Up</h4>
+          <p class="card-description">Pick items for orders</p>
+          <div class="card-value">{{ pickupCount }} orders</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics Section -->
+  <div class="stats-section" style="margin: 14px;">
+    <h3 class="section-title">Today's Overview</h3>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon processed">
+          <ion-icon name="checkmark-circle-outline"></ion-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-number">24</div>
+          <div class="stat-label">Processed</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon pending">
+          <ion-icon name="time-outline"></ion-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-number">8</div>
+          <div class="stat-label">Pending</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon completed">
+          <ion-icon name="checkmark-done-outline"></ion-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-number">156</div>
+          <div class="stat-label">Completed</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</ion-content>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Esarwa Warehouse</string>
+    <string name="title_activity_main">Esarwa Warehouse</string>
+    <string name="package_name">io.esarwa.warehouse</string>
+    <string name="custom_url_scheme">io.esarwa.warehouse</string>
+</resources>
